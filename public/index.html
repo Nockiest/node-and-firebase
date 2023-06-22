@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My File Gallery</title>
+    <style>
+        /* Add your custom CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        nav {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+        }
+        nav ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .gallery-item {
+            width: 200px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .file-form {
+            margin-top: 20px;
+        }
+        .file-form label,
+        .file-form input[type="submit"] {
+            display: block;
+            margin-bottom: 10px;
+        }
+        .file-form input[type="submit"] {
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="#">My Files</a></li>
+            <li><a href="#">Browse Files</a></li>
+            <li><a href="#">App Info</a></li>
+        </ul>
+    </nav>
+
+    <div class="gallery">
+        <!-- Gallery items will be dynamically added here -->
+    </div>
+
+    <div class="file-form">
+        <h2>Add New File</h2>
+        <form action="#" method="post">
+            <label for="filename">File Name:</label>
+            <input type="text" id="filename" name="filename">
+
+            <label for="description">Description:</label>
+            <textarea id="description" name="description"></textarea>
+
+            <input type="submit" value="Add File">
+        </form>
+    </div>
+
+    <script>
+        // Fetch files from the server and populate the gallery
+        async function fetchFiles() {
+            try {
+                const response = await fetch('/');
+                const files = await response.json();
+
+                const gallery = document.querySelector('.gallery');
+
+                files.forEach(file => {
+                    const galleryItem = document.createElement('div');
+                    galleryItem.className = 'gallery-item';
+
+                    const title = document.createElement('h3');
+                    title.textContent = file.title;
+
+                    const description = document.createElement('p');
+                    description.textContent = file.description;
+
+                    const deleteForm = document.createElement('form');
+                    deleteForm.action = '/delete'; // Replace with appropriate delete endpoint
+                    deleteForm.method = 'post';
+
+                    const deleteButton = document.createElement('input');
+                    deleteButton.type = 'submit';
+                    deleteButton.value = 'Delete';
+
+                    deleteForm.appendChild(deleteButton);
+
+                    galleryItem.appendChild(title);
+                    galleryItem.appendChild(description);
+                    galleryItem.appendChild(deleteForm);
+
+                    gallery.appendChild(galleryItem);
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        // Call the fetchFiles function when the page is loaded
+        document.addEventListener('DOMContentLoaded', fetchFiles);
+    </script>
+</body>
+</html>

@@ -29,12 +29,15 @@ app.get("/", async (req, res) => {
     querySnapshot.forEach((doc) => {
       response.push(doc.data());
     });
-
-    return res.status(200).send(response);
+    return  res.sendFile('index.html', { root: './public' });
+    // return res.status(200).send(response);
   } catch (error) {
     return res.status(500).send(error);
   }
 });
+// app.get('/', (req, res) => {
+//   res.sendFile('addfriend.html', { root: './public' });
+// }); 
 
 app.post('/add', upload.single('file'), async (req, res) => {
     try {
@@ -51,7 +54,7 @@ app.post('/add', upload.single('file'), async (req, res) => {
       }
   
       // Generate a unique filename using UUID
-      const uniqueFilename = `${uuidv4()}_${filename}`;
+      const uniqueFilename = `${uuidv4()}_${filename}_${user}`;
   
       // Upload the file to Firebase Storage
       const blob = bucket.file(`files/${uniqueFilename}`);
