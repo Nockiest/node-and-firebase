@@ -1,0 +1,18 @@
+{
+  "name": "firebaseconnect",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon app.js"
+  },
+  "author": "andrey",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/firestore": "^6.6.1",
+    "express": "^4.18.2",
+    "firebase": "^9.22.2",
+    "firebase-admin": "^11.9.0",
+    "nodemon": "^2.0.22"
+  }
+}
