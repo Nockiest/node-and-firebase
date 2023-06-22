@@ -2,21 +2,22 @@ const express = require("express");
 const multer = require('multer');
 const admin = require("firebase-admin");
 const { v4: uuidv4 } = require('uuid');
-const { getStorage, ref, uploadBytes } = require('firebase/storage');
 
 var serviceAccount = require("./config.json");
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: "fileshraingapp.appspot.com"
+  });
 
 const app = express();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const db = admin.firestore();
 const filesCollection = db.collection("files");
-  const storageRef = ref(getStorage(admin.app(), "https://console.firebase.google.com/u/0/project/fileshraingapp/storage/fileshraingapp.appspot.com/files/~2Fimages"));
+const storageRef = admin.storage().bucket();
 
+const bucket = admin.storage().bucket();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -36,79 +37,90 @@ app.get("/", async (req, res) => {
 });
 
 app.post('/add', upload.single('file'), async (req, res) => {
-  try {
-    const { filename, user } = req.body;
-    const file = req.file;
-
-    // Check if a file with the same filename already exists
-    const querySnapshot = await filesCollection.where('filename', '==', filename).get();
-
-    if (!querySnapshot.empty) {
-      return res.status(400).send('File with the same filename already exists');
-    }
-
-    // Generate a unique filename using UUID
-    const uniqueFilename = `${uuidv4()}_${filename}`;
-
-    // Upload the file to Firebase Storage
-    const snapshot = await uploadBytes(storageRef.child(uniqueFilename), file.buffer);
-
-    // Get the download URL of the uploaded file
-    const downloadURL = await snapshot.ref.getDownloadURL();
-
-    // Create a new document with the file details in Firestore
-    const newFile = await filesCollection.add({
-      filename,
-      user,
-      downloadURL,
-    });
-
-    return res.status(200).send(`File added successfully with ID: ${newFile.id}`);
-  } catch (error) {
-    console.error('Error adding file:', error);
-    return res.status(500).send('Internal Server Error');
-  }
-});
-
-  app.post('/add', upload.single('file'), async (req, res) => {
     try {
       const { filename, user } = req.body;
       const file = req.file;
   
-      console.log(file,filename, user, req.body);
-      console.log(file)
       // Check if a file with the same filename already exists
-      const querySnapshot = await filesCollection.where('filename', '==', filename).get();
+      const existingFiles = await bucket.getFiles({
+        prefix: `files/${filename}`
+      });
   
-      if (!querySnapshot.empty) {
+      if (existingFiles[0].length > 0) {
         return res.status(400).send('File with the same filename already exists');
       }
   
       // Generate a unique filename using UUID
       const uniqueFilename = `${uuidv4()}_${filename}`;
   
-      // Create a new file reference in Firebase Storage
-      const fileRef = storage.ref().child(uniqueFilename);
-  
       // Upload the file to Firebase Storage
-      await fileRef.put(file.buffer);
+      const blob = bucket.file(`files/${uniqueFilename}`);
+      const blobStream = blob.createWriteStream();
   
-      // Get the download URL of the uploaded file
-      const downloadURL = await fileRef.getDownloadURL();
-  
-      // Create a new document with the file details in Firestore
-      const newFile = await filesCollection.add({
-        filename,
-        user,
-        downloadURL,
+      blobStream.on('error', (err) => {
+        console.error('Error uploading file:', err);
+        return res.status(500).send('Internal Server Error');
       });
   
-      return res.status(200).send(`File added successfully with ID: ${newFile.id}`);
+      blobStream.on('finish', async () => {
+        // Get the download URL of the uploaded file
+        const downloadURL = await blob.getSignedUrl({
+          action: 'read',
+          expires: '03-01-2500' // Adjust the expiry date as needed
+        });
+  
+        // Save the file details in Firestore or perform any other required operations
+        // ...
+        
+        return res.status(200).send(`File added successfully with URL: ${downloadURL}`);
+      });
+  
+      blobStream.end(file.buffer);
     } catch (error) {
       console.error('Error adding file:', error);
       return res.status(500).send('Internal Server Error');
     }
   });
+
+//   app.post('/add', upload.single('file'), async (req, res) => {
+//     try {
+//       const { filename, user } = req.body;
+//       const file = req.file;
+  
+//       console.log(file,filename, user, req.body);
+//       console.log(file)
+//       // Check if a file with the same filename already exists
+//       const querySnapshot = await filesCollection.where('filename', '==', filename).get();
+  
+//       if (!querySnapshot.empty) {
+//         return res.status(400).send('File with the same filename already exists');
+//       }
+  
+//       // Generate a unique filename using UUID
+//       const uniqueFilename = `${uuidv4()}_${filename}`;
+  
+//       // Create a new file reference in Firebase Storage
+//       const fileRef = storage.ref().child(uniqueFilename);
+  
+//       // Upload the file to Firebase Storage
+//       await fileRef.put(file.buffer);
+  
+//       // Get the download URL of the uploaded file
+//       const downloadURL = await fileRef.getDownloadURL();
+  
+//       // Create a new document with the file details in Firestore
+//       const newFile = await filesCollection.add({
+//         filename,
+//         user,
+//         downloadURL,
+//       });
+  
+//       return res.status(200).send(`File added successfully with ID: ${newFile.id}`);
+//     } catch (error) {
+//       console.error('Error adding file:', error);
+//       return res.status(500).send('Internal Server Error');
+//     }
+//   });
   
   app.put('/update', async (req, res) => {
     try {
