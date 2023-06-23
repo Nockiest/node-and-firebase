@@ -24,26 +24,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('views', 'ejs');
 
+const formHTML = `
+<form class="add-form" method="POST" action="/add" enctype="multipart/form-data">
+        <label for="filename">Filename:</label>
+        <input type="text" id="filename" name="filename" required>
+        <label for="user">User:</label>
+        <input type="text" id="user" name="user" required>
+        <label for="file">File:</label>
+        <input type="file" id="file" name="file" required>
+        <label for="description">Description:</label>
+        <textarea id="description" name="description"></textarea>
+        <input type="submit" value="Upload">
+        
+      </form>
+`;
 
-const getFromFirebase = () => {
-  //1.
-  
-  // let storageRef = storage.ref();
-  // //2.
-  // storageRef.listAll().then(function (res) {
-  //     //3.
-  //     res.items.forEach((imageRef) => {
-  //       imageRef.getDownloadURL().then((url) => {
-  //           //4.
-  //           setImages((allImages) => [...allImages, url]);
-  //       });
-  //     });
-  //   })
-  //   .catch(function (error) {
-  //     console.log(error);
-  //   });
-};
- console.log(getFromFirebase())
+ 
 app.get('/', async (req, res) => {
   try {
     const files = [];
@@ -80,7 +76,8 @@ app.get('/', async (req, res) => {
           <ul>
             <li><a href="#">My Files</a></li>
             <li><a href="#">Browse Files</a></li>
-            <li><a href="#">App Info</a></li>
+            <li><a href="#">App Info</a></li>¨
+            <li><a href="gallery">App Info</a></li>
           </ul>
         </nav>
 
@@ -96,15 +93,7 @@ app.get('/', async (req, res) => {
 
         <div class="file-form">
           <h2>Add New File</h2>
-          <form action="/add" method="post">
-            <label for="filename">File Name:</label>
-            <input type="text" id="filename" name="filename">
-
-            <label for="description">Description:</label>
-            <textarea id="description" name="description"></textarea>
-
-            <input type="submit" value="Add File">
-          </form>
+         ${formHTML}
         </div>
 
         <!-- Add your custom JavaScript code here -->
@@ -163,12 +152,21 @@ app.get("/gallery", async (req, res) => {
             flex-wrap: wrap;
           }
           .image-container {
+            position: relative;
             flex: 0 0 25%;
             margin: 10px;
           }
           .image-container img {
             width: 100%;
             height: auto;
+            cursor: pointer;
+          }
+          .delete-icon {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 20px;
+            color: red;
             cursor: pointer;
           }
         </style>
@@ -185,21 +183,41 @@ app.get("/gallery", async (req, res) => {
             <a href="${file.downloadURL}" download="${file.filename}">
               <img src="${file.downloadURL}" alt="${file.filename}">
             </a>
+            <span class="delete-icon" onclick="deleteFile('${file.filename}')">&#10060;</span>
           </div>
       `;
     });
 
     htmlContent += `
-     <form class="add-form" method="POST" action="/add" enctype="multipart/form-data">
-        <label for="filename">Filename:</label>
-        <input type="text" id="filename" name="filename" required>
-        <label for="user">User:</label>
-        <input type="text" id="user" name="user" required>
-        <label for="file">File:</label>
-        <input type="file" id="file" name="file" required>
-        <input type="submit" value="Upload">
-      </form>
+     ${formHTML}
         </div>
+        <script>
+          function deleteFile(filename) {
+            if (confirm('Are you sure you want to delete this file?')) {
+              // Perform the delete operation using an AJAX request or your preferred method
+              // Example AJAX request:
+              fetch('/delete', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ filename: filename })
+              })
+              .then(response => {
+                if (response.ok) {
+                  // File deleted successfully, you can reload the gallery or update it dynamically
+                  location.reload();
+                } else {
+                  // Error occurred during file deletion
+                  console.error('Error deleting file:', response.statusText);
+                }
+              })
+              .catch(error => {
+                console.error('Error deleting file:', error);
+              });
+            }
+          }
+        </script>
       </body>
       </html>
     `;
@@ -210,6 +228,7 @@ app.get("/gallery", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 app.post('/add', upload.single('file'), async (req, res) => {
     try {
