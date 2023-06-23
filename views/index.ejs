@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My File Gallery</title>
+    <!-- Add your custom CSS styles here -->
+    <style>
+        /* Styles omitted for brevity */
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="#">My Files</a></li>
+            <li><a href="#">Browse Files</a></li>
+            <li><a href="#">App Info</a></li>
+        </ul>
+    </nav>
+
+    <div class="gallery">
+        <% files.forEach(file => { %>
+            <div class="gallery-item">
+                <h3><%= file.title %></h3>
+                <p><%= file.description %></p>
+                <form action="/delete" method="post">
+                    <input type="submit" value="Delete">
+                </form>
+            </div>
+        <% }) %>
+    </div>
+
+    <div class="file-form">
+        <h2>Add New File</h2>
+        <form action="/add" method="post">
+            <label for="filename">File Name:</label>
+            <input type="text" id="filename" name="filename">
+
+            <label for="description">Description:</label>
+            <textarea id="description" name="description"></textarea>
+
+            <input type="submit" value="Add File">
+        </form>
+    </div>
+
+    <!-- Add your custom JavaScript code here -->
+
+</body>
+</html>

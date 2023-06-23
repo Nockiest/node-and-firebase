@@ -2,14 +2,15 @@ const express = require("express");
 const multer = require('multer');
 const admin = require("firebase-admin");
 const { v4: uuidv4 } = require('uuid');
-
+const path = require('path');
+const { getDownloadURL, ref } = require('firebase/storage');
 var serviceAccount = require("./config.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     storageBucket: "fileshraingapp.appspot.com"
   });
-
+ 
 const app = express();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -20,24 +21,195 @@ const storageRef = admin.storage().bucket();
 const bucket = admin.storage().bucket();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.set('views', 'ejs');
 
-app.get("/", async (req, res) => {
+
+const getFromFirebase = () => {
+  //1.
+  
+  // let storageRef = storage.ref();
+  // //2.
+  // storageRef.listAll().then(function (res) {
+  //     //3.
+  //     res.items.forEach((imageRef) => {
+  //       imageRef.getDownloadURL().then((url) => {
+  //           //4.
+  //           setImages((allImages) => [...allImages, url]);
+  //       });
+  //     });
+  //   })
+  //   .catch(function (error) {
+  //     console.log(error);
+  //   });
+};
+ console.log(getFromFirebase())
+app.get('/', async (req, res) => {
   try {
-    let response = [];
+    const files = [];
+    const [filesResponse] = await storageRef.getFiles({ prefix: 'files/' });
+    
+    for (const file of filesResponse) {
+      const [metadata] = await file.getMetadata();
+      const downloadURL = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-01-2500' // Adjust the expiry date as needed
+      });
 
-    const querySnapshot = await filesCollection.get();
-    querySnapshot.forEach((doc) => {
-      response.push(doc.data());
-    });
-    return  res.sendFile('index.html', { root: './public' });
-    // return res.status(200).send(response);
+      files.push({
+        filename: metadata.name,
+        user: metadata.metadata.user,
+        downloadURL: downloadURL[0]
+      });
+    }
+
+    // Generate the HTML content dynamically
+    let htmlContent = `
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>My File Gallery</title>
+        <!-- Add your custom CSS styles here -->
+        <style>
+          /* Styles omitted for brevity */
+        </style>
+      </head>
+      <body>
+        <nav>
+          <ul>
+            <li><a href="#">My Files</a></li>
+            <li><a href="#">Browse Files</a></li>
+            <li><a href="#">App Info</a></li>
+          </ul>
+        </nav>
+
+        <div class="gallery">
+          ${files.map(file => `
+            <div class="file-item">
+              <h3>${file.filename}</h3>
+              <p>User: ${file.user}</p>
+              <a href="${file.downloadURL}" target="_blank">Download</a>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="file-form">
+          <h2>Add New File</h2>
+          <form action="/add" method="post">
+            <label for="filename">File Name:</label>
+            <input type="text" id="filename" name="filename">
+
+            <label for="description">Description:</label>
+            <textarea id="description" name="description"></textarea>
+
+            <input type="submit" value="Add File">
+          </form>
+        </div>
+
+        <!-- Add your custom JavaScript code here -->
+
+      </body>
+      </html>
+    `;
+
+    // Send the dynamically generated HTML content as the response
+    res.send(htmlContent);
   } catch (error) {
-    return res.status(500).send(error);
+    res.status(500).send(error);
   }
 });
-// app.get('/', (req, res) => {
-//   res.sendFile('addfriend.html', { root: './public' });
-// }); 
+ 
+app.get("/gallery", async (req, res) => {
+  try {
+    const files = [];
+    const [filesResponse] = await storageRef.getFiles({ prefix: 'files/' });
+
+    if (filesResponse[0].name === "files/") {
+      filesResponse.shift(); // Remove the first file
+    }
+
+    for (const file of filesResponse) {
+      const [metadata] = await file.getMetadata();
+      const downloadURL = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-01-2500' // Adjust the expiry date as needed
+      });
+
+      console.log(metadata.name, downloadURL[0]);
+
+      files.push({
+        filename: metadata.name,
+        downloadURL: downloadURL[0]
+      });
+    }
+
+    // Log the files to the console
+    console.log("Files:");
+    files.forEach(file => {
+      console.log(file);
+    });
+
+    // Generate the HTML content dynamically
+    let htmlContent = `
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>File Gallery</title>
+        <style>
+          .gallery {
+            display: flex;
+            flex-wrap: wrap;
+          }
+          .image-container {
+            flex: 0 0 25%;
+            margin: 10px;
+          }
+          .image-container img {
+            width: 100%;
+            height: auto;
+            cursor: pointer;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>File Gallery</h1>
+        <div class="gallery">
+    `;
+
+    files.forEach(file => {
+      htmlContent += `
+          <div class="image-container">
+            <h3>${file.filename}</h3>
+            <a href="${file.downloadURL}" download="${file.filename}">
+              <img src="${file.downloadURL}" alt="${file.filename}">
+            </a>
+          </div>
+      `;
+    });
+
+    htmlContent += `
+     <form class="add-form" method="POST" action="/add" enctype="multipart/form-data">
+        <label for="filename">Filename:</label>
+        <input type="text" id="filename" name="filename" required>
+        <label for="user">User:</label>
+        <input type="text" id="user" name="user" required>
+        <label for="file">File:</label>
+        <input type="file" id="file" name="file" required>
+        <input type="submit" value="Upload">
+      </form>
+        </div>
+      </body>
+      </html>
+    `;
+
+    res.send(htmlContent); // Send the dynamically generated HTML content as the response
+  } catch (error) {
+    console.error("Error fetching image URLs:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 app.post('/add', upload.single('file'), async (req, res) => {
     try {
@@ -85,46 +257,60 @@ app.post('/add', upload.single('file'), async (req, res) => {
     }
   });
 
-//   app.post('/add', upload.single('file'), async (req, res) => {
+  async function listFiles() {
+    try {
+      const [files] = await admin.storage().bucket().getFiles({
+        prefix: "files/"
+      });
+  
+      console.log("Files in the folder:");
+      files.forEach(file => {
+        console.log(file.name);
+      });
+    } catch (error) {
+      console.error("Error listing files:", error);
+    }
+  }
+  
+  // Call the function to list files
+  listFiles();
+  
+
+  // app.get('/', async (req, res) => {
 //     try {
-//       const { filename, user } = req.body;
-//       const file = req.file;
-  
-//       console.log(file,filename, user, req.body);
-//       console.log(file)
-//       // Check if a file with the same filename already exists
-//       const querySnapshot = await filesCollection.where('filename', '==', filename).get();
-  
-//       if (!querySnapshot.empty) {
-//         return res.status(400).send('File with the same filename already exists');
-//       }
-  
-//       // Generate a unique filename using UUID
-//       const uniqueFilename = `${uuidv4()}_${filename}`;
-  
-//       // Create a new file reference in Firebase Storage
-//       const fileRef = storage.ref().child(uniqueFilename);
-  
-//       // Upload the file to Firebase Storage
-//       await fileRef.put(file.buffer);
-  
-//       // Get the download URL of the uploaded file
-//       const downloadURL = await fileRef.getDownloadURL();
-  
-//       // Create a new document with the file details in Firestore
-//       const newFile = await filesCollection.add({
-//         filename,
-//         user,
-//         downloadURL,
-//       });
-  
-//       return res.status(200).send(`File added successfully with ID: ${newFile.id}`);
+//         let response = [];
+
+//         const querySnapshot = await filesCollection.get();
+//         querySnapshot.forEach((doc) => {
+//             response.push(doc.data());
+//         });
+
+//         // Render the "index.ejs" file and pass the response data to it
+//         res.render('index', { files: response });
 //     } catch (error) {
-//       console.error('Error adding file:', error);
-//       return res.status(500).send('Internal Server Error');
+//         res.status(500).send(error);
 //     }
-//   });
+// });
+
+ 
   
+// Serve static files from the "public" directory
+ 
+// app.get("/", async (req, res) => {
+//   try {
+//     let response = [];
+
+//     const querySnapshot = await filesCollection.get();
+//     querySnapshot.forEach((doc) => {
+//       response.push(doc.data());
+//     });
+//     return  res.sendFile('index.html', { root: './public' });
+//     // return res.status(200).send(response);
+//   } catch (error) {
+//     return res.status(500).send(error);
+//   }
+// });
+
   app.put('/update', async (req, res) => {
     try {
       const { user, filename, contents } = req.body;
@@ -177,7 +363,6 @@ app.post('/add', upload.single('file'), async (req, res) => {
     }
   });
   
-
    const PORT = 5000;
 
    app.listen(PORT, ()=>{
