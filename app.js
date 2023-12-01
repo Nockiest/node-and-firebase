@@ -22,7 +22,7 @@ const bucket = admin.storage().bucket();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.set('views', 'ejs');
+// app.set('views', 'ejs');
 
 const formHTML = `
 <form class="add-form" method="POST" action="/add" enctype="multipart/form-data">
@@ -40,11 +40,83 @@ const formHTML = `
 `;
 
  
-app.get('/', async (req, res) => {
+// app.get('/', async (req, res) => {
+//   try {
+//     const files = [];
+//     const [filesResponse] = await storageRef.getFiles({ prefix: 'files/' });
+    
+//     for (const file of filesResponse) {
+//       const [metadata] = await file.getMetadata();
+//       const downloadURL = await file.getSignedUrl({
+//         action: 'read',
+//         expires: '03-01-2500' // Adjust the expiry date as needed
+//       });
+
+//       files.push({
+//         filename: metadata.name,
+//         user: metadata.metadata.user,
+//         downloadURL: downloadURL[0]
+//       });
+//     }
+
+//     // Generate the HTML content dynamically
+//     let htmlContent = `
+//       <html lang="en">
+//       <head>
+//         <meta charset="UTF-8">
+//         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//         <title>My File Gallery</title>
+//         <!-- Add your custom CSS styles here -->
+//         <style>
+//           /* Styles omitted for brevity */
+//         </style>
+//       </head>
+//       <body>
+//         <nav>
+//           <ul>
+//             <li><a href="#">My Files</a></li>
+//             <li><a href="#">Browse Files</a></li>
+//             <li><a href="#">App Info</a></li>¨
+//             <li><a href="gallery">App Info</a></li>
+//           </ul>
+//         </nav>
+
+//         <div class="gallery">
+//           ${files.map(file => `
+//             <div class="file-item">
+//               <h3>${file.filename}</h3>
+//               <p>User: ${file.user}</p>
+//               <a href="${file.downloadURL}" target="_blank">Download</a>
+//             </div>
+//           `).join('')}
+//         </div>
+
+//         <div class="file-form">
+//           <h2>Add New File</h2>
+//          ${formHTML}
+//         </div>
+
+//         <!-- Add your custom JavaScript code here -->
+
+//       </body>
+//       </html>
+//     `;
+
+//     // Send the dynamically generated HTML content as the response
+//     res.send(htmlContent);
+//   } catch (error) {
+//     res.status(500).send(error);
+//   }
+// });
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+});
+
+app.get('/fetchFiles', async (req, res) => {
   try {
     const files = [];
     const [filesResponse] = await storageRef.getFiles({ prefix: 'files/' });
-    
+
     for (const file of filesResponse) {
       const [metadata] = await file.getMetadata();
       const downloadURL = await file.getSignedUrl({
@@ -59,56 +131,16 @@ app.get('/', async (req, res) => {
       });
     }
 
-    // Generate the HTML content dynamically
-    let htmlContent = `
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>My File Gallery</title>
-        <!-- Add your custom CSS styles here -->
-        <style>
-          /* Styles omitted for brevity */
-        </style>
-      </head>
-      <body>
-        <nav>
-          <ul>
-            <li><a href="#">My Files</a></li>
-            <li><a href="#">Browse Files</a></li>
-            <li><a href="#">App Info</a></li>¨
-            <li><a href="gallery">App Info</a></li>
-          </ul>
-        </nav>
-
-        <div class="gallery">
-          ${files.map(file => `
-            <div class="file-item">
-              <h3>${file.filename}</h3>
-              <p>User: ${file.user}</p>
-              <a href="${file.downloadURL}" target="_blank">Download</a>
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="file-form">
-          <h2>Add New File</h2>
-         ${formHTML}
-        </div>
-
-        <!-- Add your custom JavaScript code here -->
-
-      </body>
-      </html>
-    `;
-
-    // Send the dynamically generated HTML content as the response
-    res.send(htmlContent);
+    res.json(files);
   } catch (error) {
     res.status(500).send(error);
   }
 });
- 
+
+app.post('/add', (req, res) => {
+  // Code for handling file upload
+  // ...
+});
 app.get("/gallery", async (req, res) => {
   try {
     const files = [];

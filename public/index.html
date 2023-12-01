@@ -1,1 +1,72 @@
- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My File Gallery</title>
+  <!-- Add your custom CSS styles here -->
+  <style>
+    /* Styles omitted for brevity */
+  </style>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="#">My Files</a></li>
+      <li><a href="#">Browse Files</a></li>
+      <li><a href="#">App Info</a></li>
+      <li><a href="gallery">App Info</a></li>
+    </ul>
+  </nav>
+
+  <div class="gallery">
+     
+  </div>
+
+  <div class="file-form">
+    <h2>Add New File</h2>
+    <form class="add-form" method="POST" action="/add" enctype="multipart/form-data">
+      <label for="filename">Filename:</label>
+      <input type="text" id="filename" name="filename" required>
+      <label for="user">User:</label>
+      <input type="text" id="user" name="user" required>
+      <label for="file">File:</label>
+      <input type="file" id="file" name="file" required>
+      <label for="description">Description:</label>
+      <textarea id="description" name="description"></textarea>
+      <input type="submit" value="Upload">
+    </form>
+  </div>
+
+  <!-- Add your custom JavaScript code here -->
+  <script>
+    async function fetchFiles() {
+      const response = await fetch('/fetchFiles');
+      const files = await response.json();
+     console.log(response)
+      files.forEach(file => {
+        const fileItem = document.createElement('div');
+        fileItem.classList.add('file-item');
+
+        const heading = document.createElement('h3');
+        heading.textContent = file.filename;
+        fileItem.appendChild(heading);
+
+        const userParagraph = document.createElement('p');
+        userParagraph.textContent = 'User: ' + file.user;
+        fileItem.appendChild(userParagraph);
+
+        const link = document.createElement('a');
+        link.href = file.downloadURL;
+        link.target = '_blank';
+        link.textContent = 'Download';
+        fileItem.appendChild(link);
+
+        document.querySelector('.gallery').appendChild(fileItem);
+      });
+    }
+
+    fetchFiles();
+  </script>
+</body>
+</html>
